@@ -103,8 +103,8 @@ public class User extends DBEntity {
         return roles;
     }
 
-    public void setRoles(List<Role> roie) {
-        this.roles = roie;
+    public void setRoles(List<Role> roles) {
+        this.roles = roles;
     }
 
 }
