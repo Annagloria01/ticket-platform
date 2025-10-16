@@ -2,18 +2,19 @@ package com.esercizio.milestone.ticket_platform.controller;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
+import com.esercizio.milestone.ticket_platform.model.User;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.ObjectError;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
 
 import com.esercizio.milestone.ticket_platform.model.Ticket;
 import com.esercizio.milestone.ticket_platform.repository.CategoryRepository;
@@ -21,9 +22,6 @@ import com.esercizio.milestone.ticket_platform.repository.TicketRepository;
 import com.esercizio.milestone.ticket_platform.repository.UserRepository;
 
 import jakarta.validation.Valid;
-
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 
 @Controller
 @RequestMapping("")
@@ -37,7 +35,6 @@ public class RestApiController {
 
     @Autowired
     private UserRepository userRepository;
-
     @GetMapping("/")
     public String getHome(Model model) {
         long totalTickets = ticketRepository.count();
@@ -53,11 +50,30 @@ public class RestApiController {
     }
 
     @GetMapping("/tickets")
-    public String getTickets(Model model, @RequestParam(name = "keyword", required = false) String keyword) {
-        if (keyword != null) {
-            model.addAttribute("ticketList", ticketRepository.findByTitleContainingIgnoreCase(keyword));
+    public String getTickets(Model model, @RequestParam(name = "keyword", required = false) String keyword, Authentication authentication) {
+        Set<Ticket> ticketToShow = new HashSet<>();
+        boolean hasAuthorityOperator = getAuthorityFromAuthentication(authentication, "OPERATOR");
+        boolean hasAuthorityAdmin = getAuthorityFromAuthentication(authentication, "ADMIN");
+
+        if(hasAuthorityOperator){
+            ticketToShow.addAll(ticketRepository.findByUser_Username(authentication.getName()));
         }
-        model.addAttribute("ticketList", ticketRepository.findAll());
+
+        if(hasAuthorityAdmin){
+            ticketToShow.addAll(ticketRepository.findAll());
+        }
+
+        if (keyword != null) {
+            for(Ticket ticket : ticketToShow){
+                if(!ticket.getTitle().contains(keyword)){
+                    ticketToShow.remove(ticket);
+                }
+            }
+            model.addAttribute("ticketList", ticketToShow);
+            return "tickets/displayTickets";
+        }
+
+        model.addAttribute("ticketList", ticketToShow);
         return "tickets/displayTickets";
     }
 
@@ -90,4 +106,25 @@ public class RestApiController {
         return "redirect:/tickets";
     }
 
+    @GetMapping("/tickets/{id}")
+    public String showTicket(@PathVariable Long id, Model model){
+        Optional<Ticket> ticketOpt = ticketRepository.findById(id);
+        model.addAttribute("empty", ticketOpt.isEmpty());
+
+        if(ticketOpt.isPresent()){
+            model.addAttribute("ticket", ticketOpt.get());
+        }
+
+        return "tickets/ticketDetail";
+
+    }
+
+    private boolean getAuthorityFromAuthentication(Authentication authentication, String authName) {
+        for(GrantedAuthority authority : authentication.getAuthorities()){
+            if(authority.getAuthority().equals(authName)){
+                return true;
+            }
+        }
+        return false;
+    }
 }
