@@ -15,7 +15,7 @@
 
 
 <body>
-    <nav th:replace="~{navbar :: navbar('Tickets')}"></nav>
+    <nav th:replace="~{navbar :: navbar('Home')}"></nav>
 
     <div class="container my-5">
         <div class="row justify-content-center">
@@ -138,9 +138,7 @@
                                                     d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5M4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0" />
                                             </svg>
                                         </a>
-                                        <a th:href="@{/tickets/edit/{id}(id=${item.id})}"
-                                            class="btn btn-sm btn-outline-warning me-1" title="Edit"
-                                            sec:authorize="hasAuthority('ADMIN')">
+                                        <a th:href="@{/tickets/edit/{id}(id=${item.id})}" class="btn btn-sm btn-outline-warning me-1" title="Edit">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
                                                 fill="currentColor" class="bi bi-pencil" viewBox="0 0 16 16">
                                                 <path

@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import com.esercizio.milestone.ticket_platform.model.Category;
 import com.esercizio.milestone.ticket_platform.model.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
@@ -22,6 +23,7 @@ import com.esercizio.milestone.ticket_platform.repository.TicketRepository;
 import com.esercizio.milestone.ticket_platform.repository.UserRepository;
 
 import jakarta.validation.Valid;
+import org.thymeleaf.extras.springsecurity6.auth.Authorization;
 
 @Controller
 @RequestMapping("")
@@ -36,11 +38,23 @@ public class RestApiController {
     @Autowired
     private UserRepository userRepository;
     @GetMapping("/")
-    public String getHome(Model model) {
-        long totalTickets = ticketRepository.count();
-        long totalTicketsCompleted = ticketRepository.findTicketByStatus(Ticket.TicketStatus.COMPLETED).size();
-        long totalTicketsInProgress = ticketRepository.findTicketByStatus(Ticket.TicketStatus.IN_PROGRESS).size();
-        long totalTicketsToDo = ticketRepository.findTicketByStatus(Ticket.TicketStatus.TO_DO).size();
+    public String getHome(Model model, Authentication authentication) {
+        int totalTicketsCompleted;
+        int totalTicketsInProgress;
+        int totalTicketsToDo;
+        int totalTickets;
+
+        if(getAuthorityFromAuthentication(authentication, "ADMIN")){
+            totalTicketsCompleted = ticketRepository.findTicketByStatus(Ticket.TicketStatus.COMPLETED).size();
+            totalTicketsInProgress = ticketRepository.findTicketByStatus(Ticket.TicketStatus.IN_PROGRESS).size();
+            totalTicketsToDo = ticketRepository.findTicketByStatus(Ticket.TicketStatus.TO_DO).size();
+        }else{
+            totalTicketsCompleted = ticketRepository.findTicketByStatusAndUser_Username(Ticket.TicketStatus.COMPLETED, authentication.getName()).size();
+            totalTicketsInProgress = ticketRepository.findTicketByStatusAndUser_Username(Ticket.TicketStatus.IN_PROGRESS, authentication.getName()).size();
+            totalTicketsToDo = ticketRepository.findTicketByStatusAndUser_Username(Ticket.TicketStatus.TO_DO, authentication.getName()).size();
+        }
+        totalTickets = totalTicketsCompleted + totalTicketsInProgress + totalTicketsToDo;
+
 
         model.addAttribute("totalTickets", totalTickets);
         model.addAttribute("completedTickets", totalTicketsCompleted);
@@ -77,6 +91,49 @@ public class RestApiController {
         return "tickets/displayTickets";
     }
 
+    @GetMapping("tickets/delete/{id}")
+    public String delete(@PathVariable("id") Long id) {
+        ticketRepository.deleteById(id);
+        return "redirect:/tickets";
+    }
+
+    @GetMapping("/tickets/edit/{id}")
+    public String edit(@PathVariable("id") Long id, Model model, Authentication authentication) {
+        Optional<Ticket> optTicket = ticketRepository.findById(id);
+        Ticket ticket = optTicket.get();
+        model.addAttribute("isAdmin", getAuthorityFromAuthentication(authentication, "ADMIN"));
+        model.addAttribute("isOperator", getAuthorityFromAuthentication(authentication, "OPERATOR"));
+        model.addAttribute("ticket", ticket);
+        model.addAttribute("categories", categoryRepository.findAll());
+        model.addAttribute("statusNamesList", Ticket.TicketStatus.values());
+        model.addAttribute("operators", userRepository.findByRoles_Name("OPERATOR"));
+
+        return "/tickets/editTicket";
+    }
+
+    @PostMapping("/tickets/edit/{id}")
+    public String update(@Valid @ModelAttribute("ticket") Ticket formTicket, BindingResult bindingResult, Model model, Authentication authentication) {
+
+        Ticket oldTicket = ticketRepository.findById(formTicket.getId()).get();
+
+        formTicket.setCreationDate(oldTicket.getCreationDate());
+        System.out.println("user= " + formTicket.getUser());
+
+        if (bindingResult.hasErrors()) {
+            model.addAttribute("isAdmin", getAuthorityFromAuthentication(authentication, "ADMIN"));
+            model.addAttribute("isOperator", getAuthorityFromAuthentication(authentication, "OPERATOR"));
+            model.addAttribute("ticket", oldTicket);
+            model.addAttribute("categories", categoryRepository.findAll());
+            model.addAttribute("statusNamesList", Ticket.TicketStatus.values());
+            model.addAttribute("operators", userRepository.findByRoles_Name("OPERATOR"));
+            return "/tickets/editTicket";
+        }
+
+        ticketRepository.save(formTicket);
+
+        return "redirect:/tickets";
+    }
+
     @GetMapping("/tickets/create")
     public String getTicketsForm(Model model) {
         model.addAttribute("categories", categoryRepository.findAll());
@@ -87,7 +144,7 @@ public class RestApiController {
     }
 
     @PostMapping("/tickets/create")
-    public String createTicket(@Valid @ModelAttribute("ticket") Ticket formTicket, BindingResult bindingResult, RedirectAttributes redirectAttributes, Model model) {
+    public String createTicket(@Valid @ModelAttribute("ticket") Ticket formTicket, BindingResult bindingResult, RedirectAttributes redirectAttributes, Model model, Authentication authentication) {
         Optional<Ticket> optTicket = ticketRepository.findByTitle(formTicket.getTitle());
         if (optTicket.isPresent()) {
             bindingResult.addError(new ObjectError("title", "There's already a ticket for this problem!"));
@@ -107,7 +164,7 @@ public class RestApiController {
     }
 
     @GetMapping("/tickets/{id}")
-    public String showTicket(@PathVariable Long id, Model model){
+    public String showTicket(@PathVariable Long id, Model model, Authentication authentication){
         Optional<Ticket> ticketOpt = ticketRepository.findById(id);
         model.addAttribute("empty", ticketOpt.isEmpty());
 

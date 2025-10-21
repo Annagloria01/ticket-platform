@@ -1,5 +1,6 @@
 package com.esercizio.milestone.ticket_platform.repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -16,4 +17,6 @@ public interface TicketRepository extends JpaRepository<Ticket, Long>{
     public Optional<Ticket> findByTitle(String title);
 
     List<Ticket> findByUser_Username(String username);
+
+    List<Ticket> findTicketByStatusAndUser_Username(Ticket.TicketStatus ticketStatus, String username);
 }

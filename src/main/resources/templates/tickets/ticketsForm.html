@@ -15,7 +15,7 @@
 
 
 <body>
-    <nav th:replace="~{navbar :: navbar('Tickets')}"></nav>
+    <nav th:replace="~{navbar :: navbar('Home')}"></nav>
 
     <div class="container my-5">
         <div class="row justify-content-center">
@@ -85,7 +85,6 @@
                                             </div>
                                         </div>
 
-                                        <!-- Category -->
                                         <div class="col-md-6">
                                             <label class="form-label" for="category">Category</label>
                                             <select id="category" class="form-select" th:field="*{category.id}"
@@ -102,7 +101,6 @@
                                             </div>
                                         </div>
 
-                                        <!-- Operator -->
                                         <div class="col-md-12">
                                             <label class="form-label" for="user">Operator</label>
                                             <select id="user" class="form-select" th:field="*{user.id}"
