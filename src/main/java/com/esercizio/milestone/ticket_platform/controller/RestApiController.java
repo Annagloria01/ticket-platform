@@ -1,11 +1,9 @@
 package com.esercizio.milestone.ticket_platform.controller;
 
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.*;
-import java.util.stream.Collectors;
 
-import com.esercizio.milestone.ticket_platform.model.Category;
+
 import com.esercizio.milestone.ticket_platform.model.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
@@ -23,7 +21,6 @@ import com.esercizio.milestone.ticket_platform.repository.TicketRepository;
 import com.esercizio.milestone.ticket_platform.repository.UserRepository;
 
 import jakarta.validation.Valid;
-import org.thymeleaf.extras.springsecurity6.auth.Authorization;
 
 @Controller
 @RequestMapping("")
@@ -113,8 +110,8 @@ public class RestApiController {
 
     @PostMapping("/tickets/edit/{id}")
     public String update(@Valid @ModelAttribute("ticket") Ticket formTicket, BindingResult bindingResult, Model model, Authentication authentication) {
-
         Ticket oldTicket = ticketRepository.findById(formTicket.getId()).get();
+        Optional<User> userOpt = userRepository.findByUsername(formTicket.getUser().getUsername());
 
         formTicket.setCreationDate(oldTicket.getCreationDate());
         System.out.println("user= " + formTicket.getUser());
@@ -131,6 +128,19 @@ public class RestApiController {
 
         ticketRepository.save(formTicket);
 
+        User userFound;
+
+        if(userOpt.isPresent()){
+            userFound = userOpt.get();
+        }else{
+            userFound = oldTicket.getUser();
+        }
+
+        if(formTicket.getStatus().equals(Ticket.TicketStatus.TO_DO) || formTicket.getStatus().equals(Ticket.TicketStatus.IN_PROGRESS)){
+            userFound.setStatus(User.UserStatus.AVAILABLE);
+            userRepository.save(userFound);
+        }
+
         return "redirect:/tickets";
     }
 
@@ -146,6 +156,7 @@ public class RestApiController {
     @PostMapping("/tickets/create")
     public String createTicket(@Valid @ModelAttribute("ticket") Ticket formTicket, BindingResult bindingResult, RedirectAttributes redirectAttributes, Model model, Authentication authentication) {
         Optional<Ticket> optTicket = ticketRepository.findByTitle(formTicket.getTitle());
+        Optional<User> userOpt = userRepository.findByUsername(formTicket.getUser().getUsername());
         if (optTicket.isPresent()) {
             bindingResult.addError(new ObjectError("title", "There's already a ticket for this problem!"));
         }
@@ -159,6 +170,13 @@ public class RestApiController {
 
         formTicket.setCreationDate(Instant.now());
         ticketRepository.save(formTicket);
+        if(userOpt.isPresent()){
+            User userFound = userOpt.get();
+            if(formTicket.getStatus().equals(Ticket.TicketStatus.TO_DO) || formTicket.getStatus().equals(Ticket.TicketStatus.IN_PROGRESS)){
+                userFound.setStatus(User.UserStatus.AVAILABLE);
+                userRepository.save(userFound);
+            }
+        }
         redirectAttributes.addFlashAttribute("successMessage", "Ticket created successfully");
         return "redirect:/tickets";
     }
