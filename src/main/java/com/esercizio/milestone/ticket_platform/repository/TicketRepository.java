@@ -21,4 +21,8 @@ public interface TicketRepository extends JpaRepository<Ticket, Long>{
     List<Ticket> findTicketByStatusAndUser_Username(Ticket.TicketStatus ticketStatus, String username);
 
     List<Ticket> findByUser_UsernameAndTitleContainingIgnoreCase(String name, String keyword);
+
+    List<Ticket> findByCategory_Id(Long categoryId);
+
+    List<Ticket> findByStatus(Ticket.TicketStatus status);
 }
