@@ -17,9 +17,9 @@ public class DatabaseUserDetails implements UserDetails {
 
     private String password;
 
-    private Set<GrantedAuthority> authorities;
+    private Set<GrantedAuthority> authorities; //ruoli e permessi utente
 
-    public DatabaseUserDetails(User user) {
+    public DatabaseUserDetails(User user) { //recuperare utemte
         this.username = user.getUsername();
         this.password = user.getPassword();
         this.authorities = new HashSet<>();

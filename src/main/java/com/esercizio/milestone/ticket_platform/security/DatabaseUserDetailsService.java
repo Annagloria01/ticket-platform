@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 import com.esercizio.milestone.ticket_platform.model.User;
 import com.esercizio.milestone.ticket_platform.repository.UserRepository;
 
-@Service
+@Service//logica business
 public class DatabaseUserDetailsService implements UserDetailsService{
 
     @Autowired

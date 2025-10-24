@@ -23,4 +23,8 @@ public class Role extends DBEntity {
         this.name = name;
     }
 
+    @Override
+    public String toString() {
+        return name.toUpperCase();
+    }
 }

@@ -6,7 +6,7 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
-@Entity
+@Entity//tabella
 @Table(name = "notes")
 public class Note extends DBEntity {
 
@@ -17,7 +17,7 @@ public class Note extends DBEntity {
 
     @NotNull
     @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = false)//FK
     private User author;
 
     @NotBlank

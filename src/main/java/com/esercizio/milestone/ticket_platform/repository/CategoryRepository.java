@@ -9,6 +9,6 @@ import com.esercizio.milestone.ticket_platform.model.Category;
 
 public interface CategoryRepository extends JpaRepository<Category, Long> {
 
-    @Query("SELECT c.name FROM Category c")
+    @Query("SELECT c.name FROM Category c")//query personalizzata
     List<String> findAllCategoryNames();
 }

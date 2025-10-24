@@ -11,6 +11,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -22,8 +23,8 @@ import com.esercizio.milestone.ticket_platform.repository.UserRepository;
 
 import jakarta.validation.Valid;
 
-@Controller
-@RequestMapping("")
+@Controller//ioc
+@RequestMapping("")//ti mappa tutto
 public class RestApiController {
 
     @Autowired
@@ -36,6 +37,11 @@ public class RestApiController {
     private UserRepository userRepository;
     @GetMapping("/")
     public String getHome(Model model, Authentication authentication) {
+
+        if(authentication == null){
+            return "redirect:/login";
+        }
+
         int totalTicketsCompleted;
         int totalTicketsInProgress;
         int totalTicketsToDo;
@@ -61,32 +67,32 @@ public class RestApiController {
     }
 
     @GetMapping("/tickets")
-    public String getTickets(Model model, @RequestParam(name = "keyword", required = false) String keyword, Authentication authentication) {
-        Set<Ticket> ticketToShow = new HashSet<>();
-        boolean hasAuthorityOperator = getAuthorityFromAuthentication(authentication, "OPERATOR");
-        boolean hasAuthorityAdmin = getAuthorityFromAuthentication(authentication, "ADMIN");
+    public String getTickets(Model model, @RequestParam(name = "keyword", required = false) String keyword, Authentication authentication) {//attributi chiave valore
 
-        if(hasAuthorityOperator){
-            ticketToShow.addAll(ticketRepository.findByUser_Username(authentication.getName()));
-        }
+        List<Ticket> ticketToShow = new ArrayList<>();
+        boolean isOperator = getAuthorityFromAuthentication(authentication, "OPERATOR");
+        boolean isAdmin = getAuthorityFromAuthentication(authentication, "ADMIN");
 
-        if(hasAuthorityAdmin){
-            ticketToShow.addAll(ticketRepository.findAll());
-        }
-
-        if (keyword != null) {
-            for(Ticket ticket : ticketToShow){
-                if(!ticket.getTitle().contains(keyword)){
-                    ticketToShow.remove(ticket);
-                }
+        if (isOperator) {
+            if (keyword != null && !keyword.isBlank()) {
+                ticketToShow = ticketRepository.findByUser_UsernameAndTitleContainingIgnoreCase(authentication.getName(), keyword);
+            } else {
+                ticketToShow = ticketRepository.findByUser_Username(authentication.getName());
             }
-            model.addAttribute("ticketList", ticketToShow);
-            return "tickets/displayTickets";
+        }
+
+        if (isAdmin) {
+            if (keyword != null && !keyword.isBlank()) {
+                ticketToShow = ticketRepository.findByTitleContainingIgnoreCase(keyword);
+            } else {
+                ticketToShow = ticketRepository.findAll();
+            }
         }
 
         model.addAttribute("ticketList", ticketToShow);
         return "tickets/displayTickets";
     }
+
 
     @GetMapping("tickets/delete/{id}")
     public String delete(@PathVariable("id") Long id) {
@@ -109,17 +115,24 @@ public class RestApiController {
     }
 
     @PostMapping("/tickets/edit/{id}")
-    public String update(@Valid @ModelAttribute("ticket") Ticket formTicket, BindingResult bindingResult, Model model, Authentication authentication) {
+    public String update(@Valid @ModelAttribute("ticket") Ticket formTicket, BindingResult bindingResult, Model model, Authentication authentication) {//errori di validazione
         Ticket oldTicket = ticketRepository.findById(formTicket.getId()).get();
         Optional<User> userOpt = userRepository.findByUsername(formTicket.getUser().getUsername());
 
-        formTicket.setCreationDate(oldTicket.getCreationDate());
-        System.out.println("user= " + formTicket.getUser());
+        formTicket.setCreationDate(oldTicket.getCreationDate()); // l'oggetto dal form arriva senza creation date
+
+        if (formTicket.getUser() == null || formTicket.getUser().getId() == null) {
+            bindingResult.addError(new ObjectError("user", "Must select an Operator"));
+        }
+
+        if (formTicket.getCategory() == null || formTicket.getCategory().getId() == null) {
+            bindingResult.addError(new ObjectError("category", "Must select a Category"));
+        }
 
         if (bindingResult.hasErrors()) {
             model.addAttribute("isAdmin", getAuthorityFromAuthentication(authentication, "ADMIN"));
             model.addAttribute("isOperator", getAuthorityFromAuthentication(authentication, "OPERATOR"));
-            model.addAttribute("ticket", oldTicket);
+            model.addAttribute("ticket", formTicket);
             model.addAttribute("categories", categoryRepository.findAll());
             model.addAttribute("statusNamesList", Ticket.TicketStatus.values());
             model.addAttribute("operators", userRepository.findByRoles_Name("OPERATOR"));
@@ -159,6 +172,14 @@ public class RestApiController {
         Optional<User> userOpt = userRepository.findByUsername(formTicket.getUser().getUsername());
         if (optTicket.isPresent()) {
             bindingResult.addError(new ObjectError("title", "There's already a ticket for this problem!"));
+        }
+
+        if (formTicket.getUser() == null || formTicket.getUser().getId() == null) {
+            bindingResult.addError(new ObjectError("user", "Must select an Operator"));
+        }
+
+        if (formTicket.getCategory() == null || formTicket.getCategory().getId() == null) {
+            bindingResult.addError(new ObjectError("category", "Must select a Category"));
         }
 
         if (bindingResult.hasErrors()) {

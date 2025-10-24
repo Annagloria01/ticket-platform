@@ -32,16 +32,17 @@ public class UserApiController {
         if(authentication==null){
             return "redirect:/login";
         }
-        String username = authentication.getName();
+        String username = authentication.getName(); //username->uetnte loggato
         boolean canUpdateStatus = ticketRepository.findTicketByStatusAndUser_Username(Ticket.TicketStatus.TO_DO, username).size() + ticketRepository.findTicketByStatusAndUser_Username(Ticket.TicketStatus.IN_PROGRESS, username).size() == 0;
         Optional<User> userOpt = userRepository.findByUsername(username);
-        if (userOpt.isPresent()) {
+        if (userOpt.isPresent()) {//show dati model
             User user = userOpt.get();
             model.addAttribute("userName", user.getName());
             model.addAttribute("userSurname", user.getSurname());
             model.addAttribute("userStatus", user.getStatus());
             model.addAttribute("username", user.getUsername());
             model.addAttribute("userEmail", user.getEmail());
+            model.addAttribute("userRoles", user.getRoles().toString());
             model.addAttribute("canUpdateStatus", canUpdateStatus);
         }
         return "/user/profile";
@@ -49,7 +50,7 @@ public class UserApiController {
 
     @PostMapping("/profile/update-status")
     public String updateStatus(@RequestParam("status") String status, Authentication authentication, RedirectAttributes redirectAttributes) {
-        Optional<User> userOpt = userRepository.findByUsername(authentication.getName());
+        Optional<User> userOpt = userRepository.findByUsername(authentication.getName());//classe contenitore
         if (userOpt.isPresent()) {
             User user = userOpt.get();
 
