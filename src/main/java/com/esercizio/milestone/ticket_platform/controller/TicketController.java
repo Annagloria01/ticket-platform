@@ -4,7 +4,10 @@ import java.time.Instant;
 import java.util.*;
 
 
+import com.esercizio.milestone.ticket_platform.model.Note;
 import com.esercizio.milestone.ticket_platform.model.User;
+import com.esercizio.milestone.ticket_platform.repository.NoteRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -34,6 +37,11 @@ public class TicketController {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private NoteRepository noteRepository;
+
+
     @GetMapping("/")
     public String getHome(Model model, Authentication authentication) {
 
@@ -212,6 +220,29 @@ public class TicketController {
 
         return "tickets/ticketDetail";
 
+    }
+
+    @PostMapping("/tickets/{id}/notes/add")
+    public String addNote(@PathVariable Long id, @RequestParam(required = false) String content, Authentication authentication) {
+        if (content == null || content.trim().isEmpty()) {
+            System.out.println("Content is null or empty!");
+            return "redirect:/tickets/" + id;
+        }
+
+        Optional<Ticket> ticketOpt = ticketRepository.findById(id);
+        Optional<User> userOpt = userRepository.findByUsername(authentication.getName());
+        if (ticketOpt.isPresent()) {
+            Ticket ticket = ticketOpt.get();
+            Note note = new Note();
+            note.setContent(content);
+            if(userOpt.isPresent()){
+                note.setAuthor(userOpt.get());
+            }
+            note.setCreatedAt(Instant.now());
+            note.setTicket(ticket);
+            noteRepository.save(note);
+        }
+        return "redirect:/tickets/" + id;
     }
 
     private boolean getAuthorityFromAuthentication(Authentication authentication, String authName) {
